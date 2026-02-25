@@ -44,7 +44,11 @@ library(modelbased) # for plotting model predictions. supports the link scale (g
 # install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
 
+# Note: I needed to also install the `insight` and `see` packages to get `modelbased` to install properly; try that if you get similar error messages 
+
+library(modelbased) # To plot the posterior prediction on the measurement scale
 ```
+
 
 Let's look at the (huge) variety of distribution families that are available to use:
 
@@ -218,12 +222,6 @@ print(m.elev2, digits = 4)
 ### Plot the posterior
 
 Before we get into interpreting the GLM output, let's plot the posterior prediction on the measurement scale using the `estimate_expectation()` function from the `modelbased` package.
-
-Note: I needed to also install the `insight` and `see` packages to get `modelbased` to install properly; try that if you get similar error messages 
-
-```{r}
-library(modelbased) # To plot the posterior prediction on the measurement scale
-```
 
 ```{r}
 preds <- estimate_expectation(m.elev2, by = 'Elevation_ctr')
@@ -442,6 +440,60 @@ plot(preds, show_data = TRUE)
 
 ## 1.3 GLM with a logit link
 
+
+### Bring in turtle data
+
+```{r}
+turtle <- faraway::turtle %>% 
+  mutate(total_turtles = male + female,
+         proportion_female = female/total_turtles)
+```
+
+
+```{r}
+turtle %>% 
+  ggplot(aes(x = temp, y = proportion_female)) +
+  geom_point()
+```
+
+### Run model
+
+```{r}
+m.turt <- 
+  brm(data = turtle, # Give the model the data
+      # Choose a poisson distribution - THIS IS THE NEW PART!
+      family = binomial(link = "logit"),
+      # Specify the model here. 
+      female | trials(total_turtles) ~ 1 + temp,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 4000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.turt")
+
+summary(m.turt)
+```
+
+
+### Plot posterior estimates
+
+
+Link scale:
+
+```{r}
+
+predslogit <- estimate_expectation(m.turt, by = "temp", predict = 'link')
+predslogit <- estimate_expectation(m.turt, data = turtle, by = "temp", predict = 'link')
+predslogit <- estimate_expectation(m.turt, by = c('total_turtles', 'temp'), predict = 'link')
+plot(predslogit)
+```
+
+Response scale:
+
+```{r}
+preds <- estimate_expectation(m.turt, by = "temp")
+plot(preds, show_data = TRUE)
+```
 
 ------------------------------------------------------------------------
 
