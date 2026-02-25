@@ -702,24 +702,232 @@ to one another than to other measurements. Using multi-level models (aka
 mixed effects models, hierarchical models) can fix this and improve our
 estimates of our parameters.
 
+For some simple terminology: in multi-levels our predictor variables can
+be either *fixed effects* or *random effects*
+
+- Fixed effects are the variables we care about getting a parameter
+  estimate, like a slope value of how x affects y, from. Every model we
+  have run so far has used exclusively fixed effects.
+- Random effects are the variables that contribute to clustering in our
+  data.
+- Sometimes, a variable can be treated as either a random or a fixed
+  effect. For instance, if we have a bunch of flower density
+  measurements at three sites, we may care about which sites have the
+  highest flower density, in which case we would treat site as a fixed
+  effect and get an intercept measurement for site. However, if we don’t
+  care about the value of the site variable and only care about
+  accounting for the spatial clustering that it provides, then we would
+  treat site as a random effect.
+
 ------------------------------------------------------------------------
 
 ### Conceptual practice
 
 #### Q2.1 Fixed effects vs random effects
 
-For the following variables in the model examples, denote which
+For the following variables in the model examples below, denote which
 variables are the fixed effects and which could be accounted for as
-random effects:
+random effects (some variables could be either, but consider then as
+being eligible to be random effects):
 
 1.  Student high school graduation rates as a function of: parental
-    income, state of residence, and high school.
+    income, state of residence, and school district
 2.  Density of kelp as a function of: latitude, site, transect number,
     and density of sea urchins
 3.  Probability of whale giving birth as a function of: age, annual
     temperature, year, individual ID
 
+==== ANSWER
+
+1.  Fixed: income. Random: state and school district
+2.  Fixed: latitude, sea urchins. Random: site and transect number
+3.  Fixed: age, temperature. Random: year and individual ID
+
+==== END ANSWER
+
 ------------------------------------------------------------------------
+
+### Incorporate random effects
+
+Let’s go back to fiddler crabs and revisit the relationship between
+`air_temp` and crab `size`:
+
+``` r
+pie_crab <- lterdatasampler::pie_crab
+```
+
+``` r
+pie_crab %>% 
+  ggplot(aes(x = air_temp, y = size)) +
+  geom_point()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-27-1.png)
+
+------------------------------------------------------------------------
+
+This data is an excellent candidate for incorporating random effects.
+The researchers measured \~30 crab sizes across 13 different sites.
+Crabs that come from the same site are more similar to one another than
+to crabs at different sites by virtue of spatial proximity; there may be
+factors at play at the site level that are influence crab size that we
+want to account for in our model of `size ~ water_temp`. As you can see
+in the graph, there is very clear clustering of data points at certain
+x-axis values because those crabs share the same site that belongs to
+that x-axis value.
+
+Let’s run the crab model without the random effect of site first. Let’s
+also use a gamma distribution, since size is a positive continuous
+variable.
+
+``` r
+m.watertemp <- 
+  brm(data = pie_crab, # Give the model the penguins data
+      # Use a gamma distribution
+      family = Gamma(link = "log"),
+      # Specify the model here. 
+      size ~ 1 + water_temp,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.watertemp")
+
+print(m.watertemp, digits = 3)
+```
+
+     Family: gamma 
+      Links: mu = log 
+    Formula: size ~ 1 + water_temp 
+       Data: pie_crab (Number of observations: 392) 
+      Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+             total post-warmup draws = 4000
+
+    Regression Coefficients:
+               Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
+    Intercept     3.355     0.056    3.246    3.466 1.001     4572     3150
+    water_temp   -0.038     0.003   -0.044   -0.032 1.000     4858     3138
+
+    Further Distributional Parameters:
+          Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
+    shape   23.325     1.665   20.174   26.621 1.002     2803     2822
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+Now let’s incorporate site as a random effect:
+
+``` r
+m.watertemp.site <- 
+  brm(data = pie_crab, # Give the model the penguins data
+      # Use a gamma distribution
+      family = Gamma(link = "log"),
+      # Specify the model here. 
+      size ~ 1 + water_temp + (1|site),
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.watertemp.site")
+
+print(m.watertemp.site, digits = 3)
+```
+
+     Family: gamma 
+      Links: mu = log 
+    Formula: size ~ 1 + water_temp + (1 | site) 
+       Data: pie_crab (Number of observations: 392) 
+      Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+             total post-warmup draws = 4000
+
+    Multilevel Hyperparameters:
+    ~site (Number of levels: 13) 
+                  Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
+    sd(Intercept)    0.123     0.031    0.076    0.197 1.001      971     1349
+
+    Regression Coefficients:
+               Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
+    Intercept     3.368     0.189    3.001    3.743 1.002      990     1713
+    water_temp   -0.039     0.011   -0.060   -0.018 1.003     1041     1815
+
+    Further Distributional Parameters:
+          Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
+    shape   30.077     2.230   25.869   34.679 1.001     3658     3039
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+------------------------------------------------------------------------
+
+### Compare WAIC and PSIS of the two models
+
+``` r
+waic(m.watertemp, m.watertemp.site)
+```
+
+    Output of model 'm.watertemp':
+
+    Computed from 4000 by 392 log-likelihood matrix.
+
+              Estimate   SE
+    elpd_waic   -984.8 12.2
+    p_waic         2.8  0.2
+    waic        1969.5 24.4
+
+    Output of model 'm.watertemp.site':
+
+    Computed from 4000 by 392 log-likelihood matrix.
+
+              Estimate   SE
+    elpd_waic   -938.6 13.7
+    p_waic        12.3  0.8
+    waic        1877.2 27.4
+
+    Model comparisons:
+                     elpd_diff se_diff
+    m.watertemp.site   0.0       0.0  
+    m.watertemp      -46.1       8.5  
+
+``` r
+loo(m.watertemp, m.watertemp.site)
+```
+
+    Output of model 'm.watertemp':
+
+    Computed from 4000 by 392 log-likelihood matrix.
+
+             Estimate   SE
+    elpd_loo   -984.8 12.2
+    p_loo         2.8  0.2
+    looic      1969.5 24.4
+    ------
+    MCSE of elpd_loo is 0.0.
+    MCSE and ESS estimates assume MCMC draws (r_eff in [0.7, 1.2]).
+
+    All Pareto k estimates are good (k < 0.7).
+    See help('pareto-k-diagnostic') for details.
+
+    Output of model 'm.watertemp.site':
+
+    Computed from 4000 by 392 log-likelihood matrix.
+
+             Estimate   SE
+    elpd_loo   -938.6 13.7
+    p_loo        12.3  0.8
+    looic      1877.3 27.4
+    ------
+    MCSE of elpd_loo is 0.1.
+    MCSE and ESS estimates assume MCMC draws (r_eff in [0.7, 1.9]).
+
+    All Pareto k estimates are good (k < 0.7).
+    See help('pareto-k-diagnostic') for details.
+
+    Model comparisons:
+                     elpd_diff se_diff
+    m.watertemp.site   0.0       0.0  
+    m.watertemp      -46.1       8.5  
 
 ## 2.2 DIY
 

@@ -459,7 +459,11 @@ Much data in ecological and evolutionary biology is clustered in some way. This 
 
 If we're not careful, we may incorrectly assume that all measurements are independent of one another, where in reality, the measurements that are closer together in space, time, etc, are likely more closely related to one another than to other measurements. Using multi-level models (aka mixed effects models, hierarchical models) can fix this and improve our estimates of our parameters.
 
+For some simple terminology: in multi-levels our predictor variables can be either *fixed effects* or *random effects*
 
+-   Fixed effects are the variables we care about getting a parameter estimate, like a slope value of how x affects y, from. Every model we have run so far has used exclusively fixed effects.
+-   Random effects are the variables that contribute to clustering in our data.
+-   Sometimes, a variable can be treated as either a random or a fixed effect. For instance, if we have a bunch of flower density measurements at three sites, we may care about which sites have the highest flower density, in which case we would treat site as a fixed effect and get an intercept measurement for site. However, if we don't care about the value of the site variable and only care about accounting for the spatial clustering that it provides, then we would treat site as a random effect.
 
 ------
 
@@ -467,17 +471,90 @@ If we're not careful, we may incorrectly assume that all measurements are indepe
 
 #### Q2.1 Fixed effects vs random effects
 
-For the following variables in the model examples, denote which variables are the fixed effects and which could be accounted for as random effects:
+For the following variables in the model examples below, denote which variables are the fixed effects and which could be accounted for as random effects (some variables could be either, but consider then as being eligible to be random effects):
 
-1.    Student high school graduation rates as a function of: parental income, state of residence, and high school.
+1.    Student high school graduation rates as a function of: parental income, state of residence, and school district
 2.    Density of kelp as a function of: latitude, site, transect number, and density of sea urchins
 3.    Probability of whale giving birth as a function of: age, annual temperature, year, individual ID
 
 
+==== ANSWER
 
+1.    Fixed: income. Random: state and school district
+2.    Fixed: latitude, sea urchins. Random: site and transect number
+3.    Fixed: age, temperature. Random: year and individual ID
+
+==== END ANSWER
 
 
 ------------------------------------------------------------------------
+
+### Incorporate random effects
+
+Let's go back to fiddler crabs and revisit the relationship between `air_temp` and crab `size`:
+
+```{r}
+pie_crab <- lterdatasampler::pie_crab
+```
+
+```{r}
+pie_crab %>% 
+  ggplot(aes(x = air_temp, y = size)) +
+  geom_point()
+```
+
+------
+
+This data is an excellent candidate for incorporating random effects. The researchers measured ~30 crab sizes across 13 different sites. Crabs that come from the same site are more similar to one another than to crabs at different sites by virtue of spatial proximity; there may be factors at play at the site level that are influence crab size that we want to account for in our model of `size ~ water_temp`. As you can see in the graph, there is very clear clustering of data points at certain x-axis values because those crabs share the same site that belongs to that x-axis value.
+
+Let's run the crab model without the random effect of site first. Let's also use a gamma distribution, since size is a positive continuous variable.
+
+```{r}
+m.watertemp <- 
+  brm(data = pie_crab, # Give the model the penguins data
+      # Use a gamma distribution
+      family = Gamma(link = "log"),
+      # Specify the model here. 
+      size ~ 1 + water_temp,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.watertemp")
+
+print(m.watertemp, digits = 3)
+```
+
+
+
+Now let's incorporate site as a random effect:
+
+```{r}
+m.watertemp.site <- 
+  brm(data = pie_crab, # Give the model the penguins data
+      # Use a gamma distribution
+      family = Gamma(link = "log"),
+      # Specify the model here. 
+      size ~ 1 + water_temp + (1|site),
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.watertemp.site")
+
+print(m.watertemp.site, digits = 3)
+```
+
+------
+
+### Compare WAIC and PSIS of the two models
+
+```{r}
+waic(m.watertemp, m.watertemp.site)
+loo(m.watertemp, m.watertemp.site)
+```
+
+
 
 ## 2.2 DIY
 
