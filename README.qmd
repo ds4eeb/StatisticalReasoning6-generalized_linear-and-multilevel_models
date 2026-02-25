@@ -9,7 +9,7 @@ editor: source
 
 Welcome! This is the sixth statistical reasoning activity. The goals of this activity are to understand how to implement and interpret both generalized linear models and multilevel models. Specifically, you will:
 
--   Learn to identify the proper distribution to use with data
+-   Learn to identify an appropriate distribution to use with data
 -   Implement and interpret generalized linear models, including understanding how to interpret results based on "link functions"
 -   Implement and interpret multilevel models by adding "random effects" to models
 
@@ -40,13 +40,13 @@ Generalized linear models allow us to use different distributions that reflect t
 library(tidyverse) # For data wrangling
 library(brms) # For stats
 library(ggeffects) # for plotting model predictions
+# Note: I needed to also install the `insight` and `see` packages to get `modelbased` to install properly; try that if you get similar error messages 
+# install.packages('modelbased') # if you need to install this package
 library(modelbased) # for plotting model predictions. supports the link scale (ggeffects does not)
 # install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
 
-# Note: I needed to also install the `insight` and `see` packages to get `modelbased` to install properly; try that if you get similar error messages 
 
-library(modelbased) # To plot the posterior prediction on the measurement scale
 ```
 
 
@@ -92,7 +92,7 @@ Now,
 
 -------
 
-In this next section, we are going to practice running generalized linear models using distributions with two common link functions: Poisson distribution (with a log link) and Bernouilli distribution with a logit link.
+In this next section, we are going to practice running generalized linear models using distributions with two common link functions: Poisson distribution (with a log link) and Bernoulli distribution with a logit link.
 
 -----
 
@@ -110,7 +110,7 @@ head(gala)
 # Look at the help page too!
 ```
 
-Topographic heterogeneity often creates a larger number of ecological niches in which species can specialize, and topography can also facilitate species divergence. These processes might be at work on the Galapagos. Let's ask the question: *Does the highest elevation of an island influence the number of endemic plant species?*
+More topographic heterogeneity often creates a larger number of ecological niches in which species can specialize, and topography can also facilitate species divergence. These processes might be at work on the Galapagos. Let's ask the question: *Does the highest elevation of an island influence the number of endemic plant species?*
 
 -----
 
@@ -126,7 +126,7 @@ gala %>%
   geom_density()
 ```
 
-It does not look normal - there is a big peak near zero, and the distribution is definitely not symmetrical. It also does not cross zero.
+It does not look normal - there is a big peak near zero, and the distribution is definitely not symmetrical. It also is never negative and does not cross zero.
 
 === END ANSWER
 
@@ -188,7 +188,7 @@ Look at the plots and the summary, then please explain what you have learned. Ha
 -------
 
 #### Q1.6 Center the predictors
-To fix convergence issues, it helps to center the predictors, increase the iterations and warmups, and set some priors. Please 1) center Elevation, 2) try iter=6000, warmup=4000, 3) add some priors that seem reasonable, and 4) re-fit the model. Please call the new model m.elev2, then use plot(), summary(), and pairs() on it.
+To fix convergence issues, it helps to center the predictors, increase the iterations and warmups, and set some priors. Please 1) center Elevation, 2) try iter=6000, warmup=4000, 3) add some priors that seem reasonable, and 4) re-fit the model. Please call the new model m.elev2, then use plot(), summary(), and pairs() on it. This is a lot on your own, but you can do it! And we're here to help.
 
 Remember, the model output rounds to two decimal places, so if the values are smaller than two decimal places, you can replace `summary(model)` with `print(model, digits = 4)`.
 
@@ -252,7 +252,7 @@ Normally, we would look at the estimate of `Elevation_ctr` (0.0013 for my model)
 
 We want things on the normal, "response" aka "measurement" scale, though, which is actually the units that we care about (# of species). To back-transform this and interpret it properly, we need to do two things:
 
-1.    Back transform the value using the inverse of the link function - in this case, we exponentiate it, since exponenting is the inverse of logging
+1.    Back transform the value using the inverse of the link function - in this case, we exponentiate it, since exponentiating is the inverse of logging
 2.    Interpret the result on a multiplicative scale
 
 **1. Backtransform: **
@@ -317,7 +317,7 @@ Let's get some quick practice with back-transforming values. Here are three slop
 
 --------
 
-How can we tell whether or not our slope is different from zero? We can simply go back to the default summary() output, which is on the link scale (log scale in this case) and see whether zero is consistent with the slope, as usual. In this case, my 95% CIs go from 0.0011 to 0.0014, so I am confident that zero is not a consistent slope value for this model and data.
+How can we tell whether or not our slope is different from zero? We can simply go back to the default summary() output, which is on the link scale (log scale in this case) and see whether zero is consistent with the slope, as usual. In this case, my 95% CIs go from 0.0011 to 0.0014, so I am quite confident that a zero slope value is not consistent with this model and data.
 
 ---------
 
@@ -351,7 +351,7 @@ gala2 %>%
 
 #### Q1.9 Run a model of non Endemics ~ distance from Santa Cruz Island
 
-Run a model with a Poisson distribution and log-link function that models the number of non endemic species as a function of distance from Santa Cruz Island
+Run a model with a Poisson distribution and log-link function that models the number of non-endemic species as a function of distance from Santa Cruz Island.
 
 ==== ANSWER
 
@@ -386,7 +386,7 @@ Yes, Rhat is good, chains are overlapping and flat, and the posteriors are smoot
 
 #### Q1.11 Interpret the output
 
-Interpret the output by writing a 2-3 sentence results paragraph that answers:
+Interpret the model coefficients by writing a 2-3 sentence results paragraph that answers:
 
 1.    What is the effect of distance from Santa Cruz Island on number of non-endemic species? Report the a) original output on the log scale, b) your backtransformed value, and c) the percent change that this translates to. Describe the effect using the proper units.
 2.    Does it seem like the slope estimate is different from zero? Why?
@@ -416,7 +416,7 @@ For every kilometer farther from Santa Cruz Island, the number of non-endemic sp
 
 #### Q1.12 Plot the posterior
 
-Plot the model predicts, first on the log link scale, then on the response scale
+Plot the model predicts, first on the log link scale, then on the response scale. Please show the data in your plot on the response scale.
 
 ==== ANSWER
 
@@ -442,14 +442,14 @@ plot(preds, show_data = TRUE)
 
 
 ### Bring in turtle data
-
+This dataset has the number of male and female turtles hatched at different temperature. Let's calculate the total hatched and the proportion female.
 ```{r}
 turtle <- faraway::turtle %>% 
   mutate(total_turtles = male + female,
          proportion_female = female/total_turtles)
 ```
 
-
+And let's plot it!
 ```{r}
 turtle %>% 
   ggplot(aes(x = temp, y = proportion_female)) +
@@ -457,11 +457,11 @@ turtle %>%
 ```
 
 ### Run model
-
+Since these are proportion data, a binomial link is good. Let's fit a model:
 ```{r}
 m.turt <- 
   brm(data = turtle, # Give the model the data
-      # Choose a poisson distribution - THIS IS THE NEW PART!
+      # Choose a binomial distribution - THIS IS THE NEW PART!
       family = binomial(link = "logit"),
       # Specify the model here. 
       female | trials(total_turtles) ~ 1 + temp,
@@ -511,11 +511,11 @@ Much data in ecological and evolutionary biology is clustered in some way. This 
 
 If we're not careful, we may incorrectly assume that all measurements are independent of one another, where in reality, the measurements that are closer together in space, time, etc, are likely more closely related to one another than to other measurements. Using multi-level models (aka mixed effects models, hierarchical models) can fix this and improve our estimates of our parameters.
 
-For some simple terminology: in multi-levels our predictor variables can be either *fixed effects* or *random effects*
+For some simple terminology: in multi-level models our predictor variables can be either *fixed effects* or *random effects*
 
 -   Fixed effects are the variables we care about getting a parameter estimate, like a slope value of how x affects y, from. Every model we have run so far has used exclusively fixed effects.
--   Random effects are the variables that contribute to clustering in our data.
--   Sometimes, a variable can be treated as either a random or a fixed effect. For instance, if we have a bunch of flower density measurements at three sites, we may care about which sites have the highest flower density, in which case we would treat site as a fixed effect and get an intercept measurement for site. However, if we don't care about the value of the site variable and only care about accounting for the spatial clustering that it provides, then we would treat site as a random effect.
+-   Random effects are the variables that contribute to clustering in our data. They are many coefficients of the same type, and so we can help the model learn about them as a set.
+-   Sometimes, a variable can be treated as either a random or a fixed effect.
 
 ------
 
