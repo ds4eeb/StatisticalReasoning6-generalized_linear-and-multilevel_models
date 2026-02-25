@@ -48,7 +48,7 @@ reflect the reality of our response variables.
 ``` r
 library(tidyverse) # For data wrangling
 library(brms) # For stats
-#library(ggeffects) # for plotting model predictions
+library(ggeffects) # for plotting model predictions
 library(modelbased) # for plotting model predictions. supports the link scale (ggeffects does not)
 # install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
@@ -753,7 +753,8 @@ Let’s go back to fiddler crabs and revisit the relationship between
 `air_temp` and crab `size`:
 
 ``` r
-pie_crab <- lterdatasampler::pie_crab
+pie_crab <- lterdatasampler::pie_crab %>% 
+  mutate(site = as.factor(site))
 ```
 
 ``` r
@@ -844,16 +845,16 @@ print(m.watertemp.site, digits = 3)
     Multilevel Hyperparameters:
     ~site (Number of levels: 13) 
                   Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-    sd(Intercept)    0.123     0.031    0.076    0.197 1.001      971     1349
+    sd(Intercept)    0.126     0.037    0.077    0.222 1.002      905     1100
 
     Regression Coefficients:
                Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-    Intercept     3.368     0.189    3.001    3.743 1.002      990     1713
-    water_temp   -0.039     0.011   -0.060   -0.018 1.003     1041     1815
+    Intercept     3.364     0.196    2.977    3.760 1.002     1028     1486
+    water_temp   -0.039     0.011   -0.061   -0.017 1.001     1101     1612
 
     Further Distributional Parameters:
           Estimate Est.Error l-95% CI u-95% CI  Rhat Bulk_ESS Tail_ESS
-    shape   30.077     2.230   25.869   34.679 1.001     3658     3039
+    shape   30.132     2.208   26.004   34.593 1.001     2896     2345
 
     Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
     and Tail_ESS are effective sample size measures, and Rhat is the potential
@@ -881,14 +882,14 @@ waic(m.watertemp, m.watertemp.site)
     Computed from 4000 by 392 log-likelihood matrix.
 
               Estimate   SE
-    elpd_waic   -938.6 13.7
-    p_waic        12.3  0.8
-    waic        1877.2 27.4
+    elpd_waic   -938.2 13.7
+    p_waic        11.9  0.8
+    waic        1876.4 27.3
 
     Model comparisons:
                      elpd_diff se_diff
     m.watertemp.site   0.0       0.0  
-    m.watertemp      -46.1       8.5  
+    m.watertemp      -46.5       8.5  
 
 ``` r
 loo(m.watertemp, m.watertemp.site)
@@ -914,12 +915,12 @@ loo(m.watertemp, m.watertemp.site)
     Computed from 4000 by 392 log-likelihood matrix.
 
              Estimate   SE
-    elpd_loo   -938.6 13.7
-    p_loo        12.3  0.8
-    looic      1877.3 27.4
+    elpd_loo   -938.2 13.7
+    p_loo        11.9  0.8
+    looic      1876.5 27.3
     ------
     MCSE of elpd_loo is 0.1.
-    MCSE and ESS estimates assume MCMC draws (r_eff in [0.7, 1.9]).
+    MCSE and ESS estimates assume MCMC draws (r_eff in [0.6, 1.6]).
 
     All Pareto k estimates are good (k < 0.7).
     See help('pareto-k-diagnostic') for details.
@@ -927,7 +928,20 @@ loo(m.watertemp, m.watertemp.site)
     Model comparisons:
                      elpd_diff se_diff
     m.watertemp.site   0.0       0.0  
-    m.watertemp      -46.1       8.5  
+    m.watertemp      -46.5       8.5  
+
+### Predict response of random effects
+
+``` r
+preds <- predict_response(m.watertemp.site,
+                          interval = "prediction",
+                          terms = "site",
+                          type = "random")
+
+plot(preds)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-31-1.png)
 
 ## 2.2 DIY
 

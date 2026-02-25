@@ -39,7 +39,7 @@ Generalized linear models allow us to use different distributions that reflect t
 ```{r}
 library(tidyverse) # For data wrangling
 library(brms) # For stats
-#library(ggeffects) # for plotting model predictions
+library(ggeffects) # for plotting model predictions
 library(modelbased) # for plotting model predictions. supports the link scale (ggeffects does not)
 # install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
@@ -494,7 +494,8 @@ For the following variables in the model examples below, denote which variables 
 Let's go back to fiddler crabs and revisit the relationship between `air_temp` and crab `size`:
 
 ```{r}
-pie_crab <- lterdatasampler::pie_crab
+pie_crab <- lterdatasampler::pie_crab %>% 
+  mutate(site = as.factor(site))
 ```
 
 ```{r}
@@ -553,6 +554,19 @@ print(m.watertemp.site, digits = 3)
 waic(m.watertemp, m.watertemp.site)
 loo(m.watertemp, m.watertemp.site)
 ```
+
+### Predict response of random effects
+
+```{r}
+preds <- predict_response(m.watertemp.site,
+                          interval = "prediction",
+                          terms = "site",
+                          type = "random")
+
+plot(preds)
+
+```
+
 
 
 
