@@ -188,7 +188,7 @@ Look at the plots and the summary, then please explain what you have learned. Ha
 -------
 
 #### Q1.6 Center the predictors
-To fix convergence issues, it helps to center the predictors, increase the iterations and warmups, and set some priors. Please 1) center Elevation, 2) try iter=6000, warmup=4000, 3) add some priors that seem reasonable, and 4) re-fit the model. Please call the new model m.elev2, then use plot(), summary(), and pairs() on it.
+To fix convergence issues, it helps to center the predictors, increase the iterations and warmups, and set some priors. Please 1) center Elevation by creating a new column, `Elevation_ctr`, that subtracts each value in the `Elevation` column by the mean value (hint: `Elevation - mean(Elevation)`), 2) change the brm chain arguments to iter=6000, warmup=4000, 3) add some priors that seem reasonable, and 4) re-fit the model. Please call the new model m.elev2, then use plot(), summary(), and pairs() on it.
 
 Remember, the model output rounds to two decimal places, so if the values are smaller than two decimal places, you can replace `summary(model)` with `print(model, digits = 4)`.
 
@@ -250,12 +250,12 @@ print(m.elev2, digits = 4)
 
 Normally, we would look at the estimate of `Elevation_ctr` (0.0013 for my model) and say that "for every one meter of Elevation, we have an increase in 0.0013 endemic species". However, this is on the log scale, which means that "for every one meter of Elevation, we have an increase in 0.0013 log(endemic species)". This is the linear slope that we see when we plot the `estimate_expectation(m.elev2, by = 'Elevation_ctr', predict = 'link')`.
 
-We want things on the normal, "response" aka "measurement" scale, though, which is actually the units that we care about (# of species). To back-transform this and interpret it properly, we need to do two things:
+We want things on the "response" aka "measurement" scale, though, which is in the units that we care about (# of species). To back-transform this and interpret it properly, we need to do two things:
 
 1.    Back transform the value using the inverse of the link function - in this case, we exponentiate it, since exponenting is the inverse of logging
 2.    Interpret the result on a multiplicative scale
 
-**1. Backtransform: **
+1. **Backtransform:**
 
 My slope value is 0.0013, so I will take the `exp()` of that value:
 
@@ -265,7 +265,7 @@ exp(0.0013)
 
 This back transforms to 1.0013
 
-**2. Interpret: **
+2. **Interpret:**
 
 This value of 1.0013 does NOT mean that for every 1m of elevation, you get an increase 1.0013 species. Because it is a log scale specifically, our response variable is increasing exponentially with our predictor, like in the graph we made above and copied below. The correct way to interpret this value is multiplicatively: *for every 1m of elevation, you get an increase in 1.0013 times as many species as the previous meter.* 
 
@@ -275,7 +275,7 @@ plot(preds, show_data = TRUE)
 
 A nice way to think about this is percent increase in species per meter. If your back-transformed slope is 1.00, you have no change: for every 1m of elevation, you get 1x as many species, which is exactly the same number as before. If you had a back-transformed value of 1.01, you would have 1.01x as many species, or a `(1.01 - 1.00)*100 = 1%` increase in species per meter of elevation. If you got a back-transformed slope value of 0.5, then for every m of elevation, you would have `(0.5 - 1.0)*100 = -50%` change, or a 50% decline in number of species per m of elevation
 
-This is a confusing new way to interpret these values. Thankfully, a lot of GLMs use distributions that have log scales, so you can implement this method quite often.
+This can be confusing since it's a whole new way to interpret these values. Thankfully, a lot of distributions use log link scales, so you can implement this method quite often.
 
 -----
 
@@ -416,7 +416,7 @@ For every kilometer farther from Santa Cruz Island, the number of non-endemic sp
 
 #### Q1.12 Plot the posterior
 
-Plot the model predicts, first on the log link scale, then on the response scale
+Plot the model predictionss, first on the log link scale, then on the response scale
 
 ==== ANSWER
 
@@ -507,13 +507,13 @@ plot(preds, show_data = TRUE)
 
 ## 2.1 Introduction
 
-Much data in ecological and evolutionary biology is clustered in some way. This clustering can be spatial, with some replicate measurements being taken closer to one another than other, such as conducting 10 transects at one site and another 10 transects and a different site. It can temporal, where a bunch of measurements are closer together in time compared to others, such as all within the same season. There are many other examples!
+Much of the data in ecological and evolutionary biology is clustered in some way. This clustering can be spatial, with some replicate measurements being taken closer to one another than others, such as conducting 10 transects at one site and another 10 transects and a different site. It can temporal, where a bunch of measurements are closer together in time compared to others, such as all within the same season. A single individual, such as with large, well-studied marine mammals, or test subjects in a lab, may be sampled multiple times. There are many other examples!
 
 If we're not careful, we may incorrectly assume that all measurements are independent of one another, where in reality, the measurements that are closer together in space, time, etc, are likely more closely related to one another than to other measurements. Using multi-level models (aka mixed effects models, hierarchical models) can fix this and improve our estimates of our parameters.
 
 For some simple terminology: in multi-levels our predictor variables can be either *fixed effects* or *random effects*
 
--   Fixed effects are the variables we care about getting a parameter estimate, like a slope value of how x affects y, from. Every model we have run so far has used exclusively fixed effects.
+-   Fixed effects are the variables we care about getting a parameter estimate from, like a slope value of how x affects y. **Every model we have run so far has used exclusively fixed effects**.
 -   Random effects are the variables that contribute to clustering in our data.
 -   Sometimes, a variable can be treated as either a random or a fixed effect. For instance, if we have a bunch of flower density measurements at three sites, we may care about which sites have the highest flower density, in which case we would treat site as a fixed effect and get an intercept measurement for site. However, if we don't care about the value of the site variable and only care about accounting for the spatial clustering that it provides, then we would treat site as a random effect.
 
@@ -558,7 +558,7 @@ pie_crab %>%
 
 ------
 
-This data is an excellent candidate for incorporating random effects. The researchers measured ~30 crab sizes across 13 different sites. Crabs that come from the same site are more similar to one another than to crabs at different sites by virtue of spatial proximity; there may be factors at play at the site level that are influence crab size that we want to account for in our model of `size ~ water_temp`. As you can see in the graph, there is very clear clustering of data points at certain x-axis values because those crabs share the same site that belongs to that x-axis value.
+This data is an excellent candidate for incorporating random effects. The researchers measured ~30 crab sizes per site across 13 different sites. Crabs that come from the same site are more similar to one another than to crabs at different sites by virtue of spatial proximity; there may be factors at play at the site level that are influence crab size that we want to account for in our model of `size ~ water_temp`. As you can see in the graph, there is very clear clustering of data points at certain x-axis values because those crabs share the same site that belongs to that x-axis value.
 
 Let's run the crab model without the random effect of site first. Let's also use a gamma distribution, since size is a positive continuous variable.
 
@@ -600,12 +600,30 @@ print(m.watertemp.site, digits = 3)
 
 ------
 
-### Compare WAIC and PSIS of the two models
+#### Q2.2 What is the effect of water_temp on crab size on the response scale?
+
+Interpret the output by writing a 2-3 sentence results paragraph that answers:
+
+1.    What is the effect of water_temp on creab size? Report the a) original output on the log scale, b) your backtransformed value, and c) the percent change that this translates to. Describe the effect using the proper units.
+2.    Does it seem like the slope estimate is different from zero? Why?
+
+
+------
+
+#### Q2.3 Compare WAIC and PSIS of the two models
+
+Between the two models, which has the better predictive power?
+
+==== ANSWER
 
 ```{r}
 waic(m.watertemp, m.watertemp.site)
 loo(m.watertemp, m.watertemp.site)
 ```
+
+The one with the random effect of site!
+
+==== END ANSWER
 
 ### Predict response of random effects
 
