@@ -39,7 +39,9 @@ Generalized linear models allow us to use different distributions that reflect t
 ```{r}
 library(tidyverse) # For data wrangling
 library(brms) # For stats
-library(ggeffects) # for plotting model predictions
+#library(ggeffects) # for plotting model predictions
+library(modelbased) # for plotting model predictions. supports the link scale (ggeffects does not)
+# install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
 ```
 
@@ -68,24 +70,24 @@ For Q1.1a and b, consider the following response variables:
 
 ### Q1.1a What values can each of the response variables take on?
 
-Describe the type of values each of the variables can take on (e.g. negatives, positives, zeroes, integers, decimals, 0's/1's, etc)
+Describe the type of values each of the variables can take on (e.g. real numbers, negative real numbers, positive real numbers, zeroes, integers, fractions, 0's/1's, etc.)
 
 -----
 
-### Q1.1b Choose which distribution best fits each of the response variables
+### Q1.1b Choose a distribution that fits each of the response variables
 
 ------
 
-### Q1.2 Choose which distribution best fits your final project response variable
+### Q1.2 Choose a distribution that fits your final project response variable
 
 Now, 
 1.    Write the response variable that you are using for your final project. 
-2.    What values can your response variable take on? (e.g. negative, positive, zero, integers, decimals, 0/1, etc)
-3.    What distribution fits your response variable?
+2.    What values can your response variable take on? (e.g. real numbers, negative real numbers, positive real numbers, zeroes, integers, fractions, 0's/1's, etc.)
+3.    What distribution (or distributions) fits your response variable?
 
 -------
 
-In this next section, we are going to practice running generalized linear models using distributions with two common link functions: Poisson distribution (with a log link) and Bernouilli distribution with a logit link
+In this next section, we are going to practice running generalized linear models using distributions with two common link functions: Poisson distribution (with a log link) and Bernouilli distribution with a logit link.
 
 -----
 
@@ -103,13 +105,13 @@ head(gala)
 # Look at the help page too!
 ```
 
-Let's ask the question: *Does the highest elevation of an island influence the number of endemic plant species?*
+Topographic heterogeneity often creates a larger number of ecological niches in which species can specialize, and topography can also facilitate species divergence. These processes might be at work on the Galapagos. Let's ask the question: *Does the highest elevation of an island influence the number of endemic plant species?*
 
 -----
 
 ### Q1.3 Plot a histogram of the response variable `Endemics`
 
-Plot a histogram or density plot of the response variable `Endemics` to see how it is distributed. Does it look like a normal (Gaussian) distribution, which us a nice, symmetrical distribution that can take any value, or does it have certain constraints? What are those constraints?
+Plot a histogram or density plot of the response variable `Endemics` to see how it is distributed. Does it look like a normal (Gaussian) distribution, which is a nice, symmetrical distribution that can take any value, or does it have certain constraints? What are those constraints?
 
 === ANSWER
 
@@ -127,7 +129,7 @@ It does not look normal - there is a big peak near zero, and the distribution is
 
 ### Q1.4 Plot Endemics ~ Elevation
 
-Make a plot to visualize the model we are about to run: Endemics as a function of Elevation
+Make a plot to visualize the model we are about to run: Endemics as a function of Elevation.
 
 === ANSWER
 
@@ -146,9 +148,9 @@ gala %>%
 
 #### Run the model
 
-Hopefully you realize that this data is definitely not suitable for a normal (aka Gaussian) distribution - given that it is count data, we are going to use a **Poisson distribution**, which uses a log link function.
+Since these are integer counts and always positive, these data are probably not suitable for a normal (aka Gaussian) distribution. Instead, we are going to use a **Poisson distribution**. This distribution often uses a log link function.
 
-Thankfully, this is very similar to run in R!
+Thankfully, this is very simple to run in R!
 
 ```{r}
 # Endemics ~ Elevation
@@ -169,9 +171,54 @@ And let's check out the summary:
 
 ```{r}
 plot(m.elev)
+pairs(m.elev)
 summary(m.elev)
 ```
 
+### Q1.5 Evaluate the output
+Look at the plots and the summary, then please explain what you have learned. Has the model fitting algorithm converged? If no, how do you know? If yes, what have you learned about elevation and richness?
+
+### Q1.6 Center the predictors
+To fix convergence issues, it helps to center the preditors, increase the iterations and warmups, and set some priors. Please center Elevation, try iter=6000, warmup=4000, add some priors that seem reasonable, and re-fit the model. Please call the new model m.elev2, then use plot(), summary(), and pairs() on it.
+
+=== ANSWER
+```{r}
+gala <- gala |>
+  mutate(Elevation_ctr = Elevation - mean(Elevation))
+
+# Endemics ~ Elevation
+m.elev2 <- 
+  brm(data = gala, # Give the model the penguins data
+      # Choose a poisson distribution - THIS IS THE NEW PART!
+      family = poisson(link = "log"),
+      # Specify the model here. 
+      Endemics ~ 1 + Elevation_ctr,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 6000, warmup = 4000, chains = 4, cores = 4,
+      prior = prior(normal(0, 0.1), class = b),
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.elev2")
+
+plot(m.elev2)
+pairs(m.elev2)
+summary(m.elev2)
+```
+=== END ANSWER
+
+
+Let's plot the posterior prediction on the measurement scale using the estimate_expectation() function from the modelbased package.
+```{r}
+preds <- estimate_expectation(m.elev2, by = 'Elevation_ctr')
+plot(preds, show_data = TRUE)
+```
+
+
+Remember how we have a log link? The predict_response() function by default back-transforms from the log scale (log(Endemics)) of the linear model to the measurement scale of Endemics. To see the linear model, however, we can set predict = 'link'.
+```{r}
+predslog <- estimate_expectation(m.elev2, by = 'Elevation_ctr', predict = 'link')
+plot(predslog)
+```
 
 ---------
 
