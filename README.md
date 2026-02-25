@@ -48,7 +48,9 @@ reflect the reality of our response variables.
 ``` r
 library(tidyverse) # For data wrangling
 library(brms) # For stats
-library(ggeffects) # for plotting model predictions
+#library(ggeffects) # for plotting model predictions
+library(modelbased) # for plotting model predictions. supports the link scale (ggeffects does not)
+# install.packages('faraway') # if you need to install this package
 library(faraway) # For data on galapagos species richess
 ```
 
@@ -75,36 +77,38 @@ For Q1.1a and b, consider the following response variables:
 
 ------------------------------------------------------------------------
 
-### Q1.1a What values can each of the response variables take on?
+#### Q1.1a What values can each of the response variables take on?
 
-Describe the type of values each of the variables can take on
-(e.g. negatives, positives, zeroes, integers, decimals, 0’s/1’s, etc)
-
-------------------------------------------------------------------------
-
-### Q1.1b Choose which distribution best fits each of the response variables
+Describe the type of values each of the variables can take on (e.g. real
+numbers, negative real numbers, positive real numbers, zeroes, integers,
+fractions, 0’s/1’s, etc.)
 
 ------------------------------------------------------------------------
 
-### Q1.2 Choose which distribution best fits your final project response variable
+#### Q1.1b Choose a distribution that fits each of the response variables
+
+------------------------------------------------------------------------
+
+#### Q1.2 Choose a distribution that fits your final project response variable
 
 Now, 1. Write the response variable that you are using for your final
-project. 2. What values can your response variable take on?
-(e.g. negative, positive, zero, integers, decimals, 0/1, etc) 3. What
-distribution fits your response variable?
+project. 2. What values can your response variable take on? (e.g. real
+numbers, negative real numbers, positive real numbers, zeroes, integers,
+fractions, 0’s/1’s, etc.) 3. What distribution (or distributions) fits
+your response variable?
 
 ------------------------------------------------------------------------
 
 In this next section, we are going to practice running generalized
 linear models using distributions with two common link functions:
 Poisson distribution (with a log link) and Bernouilli distribution with
-a logit link
+a logit link.
 
 ------------------------------------------------------------------------
 
-### GLM with a log link
+## 1.2 GLM with a log link
 
-#### Explore the data
+### Explore the data
 
 We’re going to use plant species richness data from the Galapagos
 islands. Species richness is simply the number of species that are found
@@ -129,16 +133,19 @@ head(gala)
 # Look at the help page too!
 ```
 
-Let’s ask the question: *Does the highest elevation of an island
-influence the number of endemic plant species?*
+Topographic heterogeneity often creates a larger number of ecological
+niches in which species can specialize, and topography can also
+facilitate species divergence. These processes might be at work on the
+Galapagos. Let’s ask the question: *Does the highest elevation of an
+island influence the number of endemic plant species?*
 
 ------------------------------------------------------------------------
 
-### Q1.3 Plot a histogram of the response variable `Endemics`
+#### Q1.3 Plot a histogram of the response variable `Endemics`
 
 Plot a histogram or density plot of the response variable `Endemics` to
 see how it is distributed. Does it look like a normal (Gaussian)
-distribution, which us a nice, symmetrical distribution that can take
+distribution, which is a nice, symmetrical distribution that can take
 any value, or does it have certain constraints? What are those
 constraints?
 
@@ -159,10 +166,10 @@ distribution is definitely not symmetrical. It also does not cross zero.
 
 ------------------------------------------------------------------------
 
-### Q1.4 Plot Endemics \~ Elevation
+#### Q1.4 Plot Endemics \~ Elevation
 
 Make a plot to visualize the model we are about to run: Endemics as a
-function of Elevation
+function of Elevation.
 
 === ANSWER
 
@@ -178,13 +185,14 @@ gala %>%
 
 ------------------------------------------------------------------------
 
-#### Run the model
+### Run the model
 
-Hopefully you realize that this data is definitely not suitable for a
-normal (aka Gaussian) distribution - given that it is count data, we are
-going to use a **Poisson distribution**, which uses a log link function.
+Since these are integer counts and always positive, these data are
+probably not suitable for a normal (aka Gaussian) distribution. Instead,
+we are going to use a **Poisson distribution**. This distribution often
+uses a log link function.
 
-Thankfully, this is very similar to run in R!
+Thankfully, this is very simple to run in R!
 
 ``` r
 # Endemics ~ Elevation
@@ -210,6 +218,12 @@ plot(m.elev)
 ![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
 
 ``` r
+pairs(m.elev)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-7-2.png)
+
+``` r
 summary(m.elev)
 ```
 
@@ -231,13 +245,439 @@ summary(m.elev)
 
 ------------------------------------------------------------------------
 
+#### Q1.5 Evaluate the output
+
+Look at the plots and the summary, then please explain what you have
+learned. Has the model fitting algorithm converged? If no, how do you
+know? If yes, what have you learned about elevation and richness?
+
 ------------------------------------------------------------------------
 
-### GLM with a logit link
+#### Q1.6 Center the predictors
+
+To fix convergence issues, it helps to center the predictors, increase
+the iterations and warmups, and set some priors. Please 1) center
+Elevation, 2) try iter=6000, warmup=4000, 3) add some priors that seem
+reasonable, and 4) re-fit the model. Please call the new model m.elev2,
+then use plot(), summary(), and pairs() on it.
+
+Remember, the model output rounds to two decimal places, so if the
+values are smaller than two decimal places, you can replace
+`summary(model)` with `print(model, digits = 4)`.
+
+=== ANSWER
+
+``` r
+gala <- gala |>
+  mutate(Elevation_ctr = Elevation - mean(Elevation))
+
+# Endemics ~ Elevation
+m.elev2 <- 
+  brm(data = gala, # Give the model the penguins data
+      # Choose a poisson distribution - THIS IS THE NEW PART!
+      family = poisson(link = "log"),
+      # Specify the model here. 
+      Endemics ~ 1 + Elevation_ctr,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 6000, warmup = 4000, chains = 4, cores = 4,
+      prior = prior(normal(0, 0.1), class = b),
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.elev2")
+
+plot(m.elev2)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+``` r
+pairs(m.elev2)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-8-2.png)
+
+``` r
+print(m.elev2, digits = 4)
+```
+
+     Family: poisson 
+      Links: mu = log 
+    Formula: Endemics ~ 1 + Elevation_ctr 
+       Data: gala (Number of observations: 30) 
+      Draws: 4 chains, each with iter = 6000; warmup = 4000; thin = 1;
+             total post-warmup draws = 8000
+
+    Regression Coefficients:
+                  Estimate Est.Error l-95% CI u-95% CI   Rhat Bulk_ESS Tail_ESS
+    Intercept       3.0751    0.0412   2.9910   3.1525 1.0036     1177     1177
+    Elevation_ctr   0.0013    0.0001   0.0011   0.0014 1.0003     3401     4284
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+=== END ANSWER
+
+### Plot the posterior
+
+Before we get into interpreting the GLM output, let’s plot the posterior
+prediction on the measurement scale using the `estimate_expectation()`
+function from the `modelbased` package.
+
+Note: I needed to also install the `insight` and `see` packages to get
+`modelbased` to install properly; try that if you get similar error
+messages
+
+``` r
+library(modelbased) # To plot the posterior prediction on the measurement scale
+```
+
+``` r
+preds <- estimate_expectation(m.elev2, by = 'Elevation_ctr')
+plot(preds, show_data = TRUE)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-10-1.png)
+
+Remember how we have a log link? What that means is that the model ran a
+linear model on the **logged** values of our response, `Endemics`. So
+the output that we get from the model is reporting the values of our
+slope, intercept, etc on the log scale.
+
+The `predict_response()` function by default back-transforms from the
+log scale (log(`Endemics`)) of the linear model to the measurement scale
+of `Endemics`; that’s what you see above. To see the linear model on the
+log scale, however, we can set predict = ‘link’:
+
+``` r
+predslog <- estimate_expectation(m.elev2, by = 'Elevation_ctr', predict = 'link')
+plot(predslog)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-11-1.png)
 
 ------------------------------------------------------------------------
 
-## 1.2 DIY
+### Interpreting link scale coefficients
+
+This difference in how the model reports coefficients is very important
+for how we interpret the `summary()` output, especially if we want to
+make it biologically meaningful. Let’s revisit the summary:
+
+``` r
+print(m.elev2, digits = 4)
+```
+
+     Family: poisson 
+      Links: mu = log 
+    Formula: Endemics ~ 1 + Elevation_ctr 
+       Data: gala (Number of observations: 30) 
+      Draws: 4 chains, each with iter = 6000; warmup = 4000; thin = 1;
+             total post-warmup draws = 8000
+
+    Regression Coefficients:
+                  Estimate Est.Error l-95% CI u-95% CI   Rhat Bulk_ESS Tail_ESS
+    Intercept       3.0751    0.0412   2.9910   3.1525 1.0036     1177     1177
+    Elevation_ctr   0.0013    0.0001   0.0011   0.0014 1.0003     3401     4284
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+Normally, we would look at the estimate of `Elevation_ctr` (0.0013 for
+my model) and say that “for every one meter of Elevation, we have an
+increase in 0.0013 endemic species”. However, this is on the log scale,
+which means that “for every one meter of Elevation, we have an increase
+in 0.0013 log(endemic species)”. This is the linear slope that we see
+when we plot the
+`estimate_expectation(m.elev2, by = 'Elevation_ctr', predict = 'link')`.
+
+We want things on the normal, “response” aka “measurement” scale,
+though, which is actually the units that we care about (# of species).
+To back-transform this and interpret it properly, we need to do two
+things:
+
+1.  Back transform the value using the inverse of the link function - in
+    this case, we exponentiate it, since exponenting is the inverse of
+    logging
+2.  Interpret the result on a multiplicative scale
+
+**1. Backtransform: **
+
+My slope value is 0.0013, so I will take the `exp()` of that value:
+
+``` r
+exp(0.0013)
+```
+
+    [1] 1.001301
+
+This back transforms to 1.0013
+
+**2. Interpret: **
+
+This value of 1.0013 does NOT mean that for every 1m of elevation, you
+get an increase 1.0013 species. Because it is a log scale specifically,
+our response variable is increasing exponentially with our predictor,
+like in the graph we made above and copied below. The correct way to
+interpret this value is multiplicatively: *for every 1m of elevation,
+you get an increase in 1.0013 times as many species as the previous
+meter.*
+
+``` r
+plot(preds, show_data = TRUE)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-14-1.png)
+
+A nice way to think about this is percent increase in species per meter.
+If your back-transformed slope is 1.00, you have no change: for every 1m
+of elevation, you get 1x as many species, which is exactly the same
+number as before. If you had a back-transformed value of 1.01, you would
+have 1.01x as many species, or a `(1.01 - 1.00)*100 = 1%` increase in
+species per meter of elevation. If you got a back-transformed slope
+value of 0.5, then for every m of elevation, you would have
+`(0.5 - 1.0)*100 = -50%` change, or a 50% decline in number of species
+per m of elevation
+
+This is a confusing new way to interpret these values. Thankfully, a lot
+of GLMs use distributions that have log scales, so you can implement
+this method quite often.
+
+------------------------------------------------------------------------
+
+#### Q1.7 What is the percent change on the response scale?
+
+Let’s get some quick practice with back-transforming values. Here are
+three slope estimates on the *log link* scale. Using the method above,
+back-transform these slopes to the response (measurement) scale and
+report the percent change using the units provided:
+
+1.  Number of Clarkias blooming as a function of temperature in Celsius:
+    1.09
+2.  Density of sea urchins per square meter in a quadrat as a function
+    of number of sea otters: -2.5
+3.  Number of tomatoes per plant as a function of kg of fertilizer: 6.24
+
+===== ANSWER
+
+1.  Number of Clarkias blooming as a function of temperature in Celsius:
+    1.09
+
+``` r
+(exp(1.09) - 1)*100
+```
+
+    [1] 197.4274
+
+197.42% increase in blooming Clarkias per degree Celsius
+
+2.  Density of sea urchins in a quadrat as a function of number of sea
+    otters: -2.5
+
+``` r
+(exp(-2.5) - 1)*100
+```
+
+    [1] -91.7915
+
+91.79% decline in sea urchins per square meter per sea otter
+
+3.  Number of tomatoes on a plant as a function of kg of fertilizer:
+    6.24
+
+``` r
+(exp(6.24) - 1)*100
+```
+
+    [1] 51185.85
+
+51185.85% increase in tomatoes per plant per kg of fertilizer
+
+===== ENDANSWER
+
+------------------------------------------------------------------------
+
+How can we tell whether or not our slope is different from zero? We can
+simply go back to the default summary() output, which is on the link
+scale (log scale in this case) and see whether zero is consistent with
+the slope, as usual. In this case, my 95% CIs go from 0.0011 to 0.0014,
+so I am confident that zero is not a consistent slope value for this
+model and data.
+
+------------------------------------------------------------------------
+
+### DIY: Run a model of non-endemic species \~ distance from Santa Cruz Island
+
+Santa Cruz Island in the Galapagos is the most populated and “touristy”
+island, while others are more remote. We might predict that non-native
+species are more common closer to Santa Cruz Island and rarer farther
+from the island. There’s not a specific “non-native species” column, but
+we can subtract the number of endemic species from the total number of
+species to get a general idea of non-endemic species.
+
+#### Q1.8 Create a non-endemic column
+
+Using what you learned in past lessons, create a new column that is the
+number of non-endemic species (call it `non_Endemics`). Then, create a
+scatterplot of the number of non-endemic species on the y-axis with the
+distance from Santa Cruz Island (km) `Scruz` on the x-axis.
+
+===ANSWER
+
+``` r
+gala2 <- gala %>% 
+  mutate(non_Endemics = Species - Endemics)
+```
+
+``` r
+gala2 %>%
+  ggplot(aes(x = Scruz, y = non_Endemics)) +
+  geom_point()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-19-1.png)
+
+==== END ANSWER
+
+------------------------------------------------------------------------
+
+#### Q1.9 Run a model of non Endemics \~ distance from Santa Cruz Island
+
+Run a model with a Poisson distribution and log-link function that
+models the number of non endemic species as a function of distance from
+Santa Cruz Island
+
+==== ANSWER
+
+``` r
+# Non ndemics ~ Elevation
+m.Scruz2 <- 
+  brm(data = gala2, # Give the model the data
+      # Choose a poisson distribution - THIS IS THE NEW PART!
+      family = poisson(link = "log"),
+      # Specify the model here. 
+      non_Endemics ~ 1 + Scruz,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.Scruz2")
+```
+
+#### Q1.10 Evaluate the output
+
+Assess whether the model ran correctly by looking at R hat, the chains,
+and the posterior distributions. Describe your thought process about
+whether the model ran correctly in 1-2 sentences.
+
+``` r
+plot(m.Scruz2)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-21-1.png)
+
+Yes, Rhat is good, chains are overlapping and flat, and the posteriors
+are smooth
+
+==== END ANSWER
+
+------------------------------------------------------------------------
+
+#### Q1.11 Interpret the output
+
+Interpret the output by writing a 2-3 sentence results paragraph that
+answers:
+
+1.  What is the effect of distance from Santa Cruz Island on number of
+    non-endemic species? Report the a) original output on the log
+    scale, b) your backtransformed value, and c) the percent change that
+    this translates to. Describe the effect using the proper units.
+2.  Does it seem like the slope estimate is different from zero? Why?
+
+``` r
+print(m.Scruz2, digits = 4)
+```
+
+     Family: poisson 
+      Links: mu = log 
+    Formula: non_Endemics ~ 1 + Scruz 
+       Data: gala2 (Number of observations: 30) 
+      Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+             total post-warmup draws = 4000
+
+    Regression Coefficients:
+              Estimate Est.Error l-95% CI u-95% CI   Rhat Bulk_ESS Tail_ESS
+    Intercept   4.3405    0.0309   4.2791   4.4025 1.0027     1939     2204
+    Scruz      -0.0055    0.0005  -0.0065  -0.0045 1.0007     2560     2393
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+``` r
+# Log slope:
+-0.0046
+```
+
+    [1] -0.0046
+
+``` r
+# Backtransformed slope: 0.995
+exp(-0.0046)
+```
+
+    [1] 0.9954106
+
+``` r
+# Percent change: -0.459%
+(exp(-0.0046) - 1)*100
+```
+
+    [1] -0.4589436
+
+For every kilometer farther from Santa Cruz Island, the number of
+non-endemic species decreases by 0.459% (-0.0046 on the log scale, and
+0.995 on the response scale). This slope is likely different from zero,
+as the log-scale slope has 95%CI that go between -0.0054 and -0.0039,
+which does not include zero.
+
+==== END ANSWER
+
+------------------------------------------------------------------------
+
+#### Q1.12 Plot the posterior
+
+Plot the model predicts, first on the log link scale, then on the
+response scale
+
+==== ANSWER
+
+Link scale:
+
+``` r
+predslog <- estimate_expectation(m.Scruz2, by = 'Scruz', predict = 'link')
+plot(predslog)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-24-1.png)
+
+Response scale:
+
+``` r
+preds <- estimate_expectation(m.Scruz2, by = 'Scruz')
+plot(preds, show_data = TRUE)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-25-1.png)
+
+==== END ANSWER
+
+------------------------------------------------------------------------
+
+## 1.3 GLM with a logit link
+
+------------------------------------------------------------------------
 
 ------------------------------------------------------------------------
 
@@ -247,11 +687,26 @@ summary(m.elev)
 
 ## 2.1 Introduction
 
+Much data in ecological and evolutionary biology is clustered in some
+way. This clustering can be spatial, with some replicate measurements
+being taken closer to one another than other, such as conducting 10
+transects at one site and another 10 transects and a different site. It
+can temporal, where a bunch of measurements are closer together in time
+compared to others, such as all within the same season. There are many
+other examples!
+
+If we’re not careful, we may incorrectly assume that all measurements
+are independent of one another, where in reality, the measurements that
+are closer together in space, time, etc, are likely more closely related
+to one another than to other measurements. Using multi-level models (aka
+mixed effects models, hierarchical models) can fix this and improve our
+estimates of our parameters.
+
 ------------------------------------------------------------------------
 
 ### Conceptual practice
 
-### Q2.1 Fixed effects vs random effects
+#### Q2.1 Fixed effects vs random effects
 
 For the following variables in the model examples, denote which
 variables are the fixed effects and which could be accounted for as
