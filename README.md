@@ -1,0 +1,284 @@
+Activity 14: Statistical reasoning 6: generalized linear and multilevel
+models
+================
+
+Welcome! This is the sixth statistical reasoning activity. The goals of
+this activity are to understand how to implement and interpret both
+generalized linear models and multilevel models. Specifically, you will:
+
+- Learn to identify the proper distribution to use with data
+- Implement and interpret generalized linear models, including
+  understanding how to interpret results based on “link functions”
+- Implement and interpret multilevel models by adding “random effects”
+  to models
+
+This is also the final activity of the class! Congratulations on making
+it!!
+
+------------------------------------------------------------------------
+
+You will submit one output for this activity:
+
+1.  A **PDF** of a rendered Quarto document with all of your R code.
+    Please create a new Quarto document (e.g. don’t use this
+    `README.qmd`) and include all of the code that appears in this
+    document, your own code, and **answers to all of the questions** in
+    the “Q#” sections. Submit this PDF through Gradescope.
+
+A reminder: **Please label the code** in your final submission in two
+ways:
+
+1.  denote your answers to each question using headers that correspond
+    to the question you’re answering, and
+2.  thoroughly “comment” your code: remember, this means annotating your
+    code directly by typing descriptions of what each line does after a
+    `#`. This will help future you!
+
+------------------------------------------------------------------------
+
+# 1. Generalized linear models
+
+------------------------------------------------------------------------
+
+## 1.1 Introduction
+
+Generalized linear models allow us to use different distributions that
+reflect the reality of our response variables.
+
+``` r
+library(tidyverse) # For data wrangling
+library(brms) # For stats
+library(ggeffects) # for plotting model predictions
+library(faraway) # For data on galapagos species richess
+```
+
+Let’s look at the (huge) variety of distribution families that are
+available to use:
+
+``` r
+?brmsfamily
+```
+
+Thankfully, we are only going to use a couple today!
+
+------------------------------------------------------------------------
+
+### Conceptual practice
+
+For Q1.1a and b, consider the following response variables:
+
+1.  Counts of Clarkia flowers in a meadow
+2.  Whether or not a female elephant seal gives birth
+3.  The percent cover of red algae in the intertidal
+4.  Growth of a tree from one year to the next
+5.  The spatial area of a forest in square meters
+
+------------------------------------------------------------------------
+
+### Q1.1a What values can each of the response variables take on?
+
+Describe the type of values each of the variables can take on
+(e.g. negatives, positives, zeroes, integers, decimals, 0’s/1’s, etc)
+
+------------------------------------------------------------------------
+
+### Q1.1b Choose which distribution best fits each of the response variables
+
+------------------------------------------------------------------------
+
+### Q1.2 Choose which distribution best fits your final project response variable
+
+Now, 1. Write the response variable that you are using for your final
+project. 2. What values can your response variable take on?
+(e.g. negative, positive, zero, integers, decimals, 0/1, etc) 3. What
+distribution fits your response variable?
+
+------------------------------------------------------------------------
+
+In this next section, we are going to practice running generalized
+linear models using distributions with two common link functions:
+Poisson distribution (with a log link) and Bernouilli distribution with
+a logit link
+
+------------------------------------------------------------------------
+
+### GLM with a log link
+
+#### Explore the data
+
+We’re going to use plant species richness data from the Galapagos
+islands. Species richness is simply the number of species that are found
+in a sample - in this case, on a given island.
+
+``` r
+# Read in the pre-stored data
+data("gala")
+# Check out the first 6 rows
+head(gala)
+```
+
+                 Species Endemics  Area Elevation Nearest Scruz Adjacent
+    Baltra            58       23 25.09       346     0.6   0.6     1.84
+    Bartolome         31       21  1.24       109     0.6  26.3   572.33
+    Caldwell           3        3  0.21       114     2.8  58.7     0.78
+    Champion          25        9  0.10        46     1.9  47.4     0.18
+    Coamano            2        1  0.05        77     1.9   1.9   903.82
+    Daphne.Major      18       11  0.34       119     8.0   8.0     1.84
+
+``` r
+# Look at the help page too!
+```
+
+Let’s ask the question: *Does the highest elevation of an island
+influence the number of endemic plant species?*
+
+------------------------------------------------------------------------
+
+### Q1.3 Plot a histogram of the response variable `Endemics`
+
+Plot a histogram or density plot of the response variable `Endemics` to
+see how it is distributed. Does it look like a normal (Gaussian)
+distribution, which us a nice, symmetrical distribution that can take
+any value, or does it have certain constraints? What are those
+constraints?
+
+=== ANSWER
+
+``` r
+gala %>%
+  ggplot(aes(x = Endemics)) +
+  geom_density()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-4-1.png)
+
+It does not look normal - there is a big peak near zero, and the
+distribution is definitely not symmetrical. It also does not cross zero.
+
+=== END ANSWER
+
+------------------------------------------------------------------------
+
+### Q1.4 Plot Endemics \~ Elevation
+
+Make a plot to visualize the model we are about to run: Endemics as a
+function of Elevation
+
+=== ANSWER
+
+``` r
+gala %>%
+  ggplot(aes(x = Elevation, y = Endemics)) +
+  geom_point()
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-5-1.png)
+
+=== END ANSWER
+
+------------------------------------------------------------------------
+
+#### Run the model
+
+Hopefully you realize that this data is definitely not suitable for a
+normal (aka Gaussian) distribution - given that it is count data, we are
+going to use a **Poisson distribution**, which uses a log link function.
+
+Thankfully, this is very similar to run in R!
+
+``` r
+# Endemics ~ Elevation
+m.elev <- 
+  brm(data = gala, # Give the model the penguins data
+      # Choose a poisson distribution - THIS IS THE NEW PART!
+      family = poisson(link = "log"),
+      # Specify the model here. 
+      Endemics ~ 1 + Elevation,
+      # Here's where you specify parameters for executing the Markov chains
+      # We're using similar to the defaults, except we set cores to 4 so the analysis runs faster than the default of 1
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      # Save the fitted model object as output - helpful for reloading in the output later
+      file = "output/m.elev")
+```
+
+And let’s check out the summary:
+
+``` r
+plot(m.elev)
+```
+
+![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
+
+``` r
+summary(m.elev)
+```
+
+     Family: poisson 
+      Links: mu = log 
+    Formula: Endemics ~ 1 + Elevation 
+       Data: gala (Number of observations: 30) 
+      Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+             total post-warmup draws = 4000
+
+    Regression Coefficients:
+              Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+    Intercept    30.80     48.84     2.51   116.49 1.60        7       11
+    Elevation    -0.08      0.14    -0.32     0.00 1.59        7       11
+
+    Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+    and Tail_ESS are effective sample size measures, and Rhat is the potential
+    scale reduction factor on split chains (at convergence, Rhat = 1).
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+### GLM with a logit link
+
+------------------------------------------------------------------------
+
+## 1.2 DIY
+
+------------------------------------------------------------------------
+
+# 2. Multilevel models
+
+------------------------------------------------------------------------
+
+## 2.1 Introduction
+
+------------------------------------------------------------------------
+
+### Conceptual practice
+
+### Q2.1 Fixed effects vs random effects
+
+For the following variables in the model examples, denote which
+variables are the fixed effects and which could be accounted for as
+random effects:
+
+1.  Student high school graduation rates as a function of: parental
+    income, state of residence, and high school.
+2.  Density of kelp as a function of: latitude, site, transect number,
+    and density of sea urchins
+3.  Probability of whale giving birth as a function of: age, annual
+    temperature, year, individual ID
+
+------------------------------------------------------------------------
+
+## 2.2 DIY
+
+------------------------------------------------------------------------
+
+### Render to PDF
+
+When you have finished, remember to pull, stage, commit, and push with
+GitHub:
+
+- Pull to check for updates to the remote branch
+- Stage your edits (after saving your document!) by checking the
+  documents you’d like to push
+- Commit your changes with a commit message
+- Push your changes to the remote branch
+
+Then submit the well-labeled PDF on Gradescope. Thanks!
