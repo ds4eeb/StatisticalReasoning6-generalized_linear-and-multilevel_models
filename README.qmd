@@ -1,0 +1,120 @@
+---
+title: "Activity 14: Statistical reasoning 6: generalized linear and multilevel models"
+subtitle: Feb. 25rd, 2026, Calvin Munson
+format: gfm
+execute:
+  warning: false
+editor: source
+---
+
+Welcome! This is the sixth statistical reasoning activity. The goals of this activity are to understand how to implement and interpret both generalized linear models and multilevel models. Specifically, you will:
+
+-   Learn to identify the proper distribution to use with data
+-   Implement and interpret generalized linear models, including understanding "link functions"
+-   Implement and interpret multilevel models by adding "random effects" to models
+
+This is also the final activity of the class! Congratulations on making it!!
+
+------------------------------------------------------------------------
+
+You will submit one output for this activity:
+
+1.  A **PDF** of a rendered Quarto document with all of your R code. Please create a new Quarto document (e.g. don't use this `README.qmd`) and include all of the code that appears in this document, your own code, and **answers to all of the questions** in the "Q#" sections. Submit this PDF through Gradescope.
+
+A reminder: **Please label the code** in your final submission in two ways:
+
+1.  denote your answers to each question using headers that correspond to the question you're answering, and
+2.  thoroughly "comment" your code: remember, this means annotating your code directly by typing descriptions of what each line does after a `#`. This will help future you!
+
+------------------------------------------------------------------------
+
+# 1. Generalized linear models
+
+------------------------------------------------------------------------
+
+## 1.1 Introduction
+
+Generalized linear models allow us to use different distributions that reflect the reality of our response variables.
+
+```{r}
+library(tidyverse) # For data wrangling
+library(brms) # For stats
+library(palmerpenguins) # For the data
+library(ggeffects) # for plotting model predictions
+```
+
+Let's look at the (huge) variety of distribution families that are available to use:
+
+```{r}
+?brmsfamily
+```
+
+Thankfully, we are only going to use a couple today! 
+
+
+-------
+
+### Conceptual practice
+
+For Q1.1a and b, consider the following response variables:
+
+1.    Counts of Clarkia flowers in a meadow
+2.    Whether or not a female elephant seal gives birth
+3.    The percent cover of red algae in the intertidal
+4.    Growth of a tree from one year to the next
+5.    The spatial area of a forest in square meters
+
+------
+
+### Q1.1a What values can each of the response variables take on?
+
+Describe the type of values each of the variables can take on (e.g. negatives, positives, zeroes, integers, decimals, 0's/1's, etc)
+
+-----
+
+### Q1.1b Choose which distribution best fits each of the response variables
+
+------
+
+### Q1.2 Choose which distribution best fits your final project response variable
+
+Now, 
+1.    Write the response variable that you are using for your final project. 
+2.    What values can your response variable take on? (e.g. negative, positive, zero, integers, decimals, 0/1, etc)
+3.    What distribution fits your response variable?
+
+-------
+
+
+
+------------------------------------------------------------------------
+
+## 1.2 DIY
+
+------------------------------------------------------------------------
+
+
+
+# 2. Multilevel models
+
+------------------------------------------------------------------------
+
+## 2.1 Introduction
+
+------------------------------------------------------------------------
+
+## 2.2 DIY
+
+------------------------------------------------------------------------
+
+
+### Render to PDF
+
+When you have finished, remember to pull, stage, commit, and push with GitHub:
+
+-   Pull to check for updates to the remote branch
+-   Stage your edits (after saving your document!) by checking the documents you'd like to push
+-   Commit your changes with a commit message
+-   Push your changes to the remote branch
+
+Then submit the well-labeled PDF on Gradescope. Thanks!
